@@ -51,8 +51,8 @@ class User(object):
 
 if __name__ == '__main__':
     userInfo = dict()
-    with open('/home/pumpkin/project/tmall/dataset/t_alibaba_data.csv', 'rb') as csvfile:
-    # with open('/home/pumpkin/project/tmall/dataset/dataset/demo.csv', 'rb') as csvfile:
+    with open('../../dataset/t_alibaba_data.csv', 'rb') as csvfile:
+    # with open('../../dataset/dataset/demo.csv', 'rb') as csvfile:
         user_table = dict()
         brand_table = dict()
         user_counter = 0

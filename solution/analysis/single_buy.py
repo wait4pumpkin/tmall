@@ -31,6 +31,7 @@ TYPE_LENGTH = 4
 class User(object):
     def __init__(self, id, info):
         self.id = id;
+        self.info = info;
         self.brands = info.keys()
         self.data = dict()
         for brand_id in self.brands:
@@ -44,6 +45,19 @@ class User(object):
                     self.data[month][brand_id] = [0, 0, 0, 0]
 
                 self.data[month][brand_id][action] += 1
+
+    def date_per_day(self, brand_id, n_day=1, n_month=3):
+        bin_per_month = int(math.ceil(N_DAY_PER_MONTH / float(n_day)))
+        data = [0 for num in xrange(n_month * bin_per_month)]
+        if brand_id not in self.info.keys(): return data
+        for month, day, action in self.info[brand_id]:
+            if month not in range(BASE_MONTH, BASE_MONTH + n_month):
+                continue
+            data[(month - BASE_MONTH) * bin_per_month + int(math.ceil(float(day) / n_day)) - 1] = 1
+        return data
+
+    def data_per_week(self, brand_id, n_month=3):
+        return self.date_per_day(brand_id, n_day=7, n_month=n_month)
 
     def __str__(self):
         return str(self.id) + ' ' + str(len(self.bands))
@@ -88,21 +102,21 @@ if __name__ == '__main__':
             band = user[brandID]
             band.append((month, day, actionType))
 
-    users = []
+    users = dict()
     for (userID, info) in userInfo.iteritems():
-        users.append(User(userID, info))
+        users[userID] = User(userID, info)
 
     history = dict()
-    for user in users:
-        if user.id not in history:
-            history[user.id] = dict()
+    for user_id, user in users.items():
+        if user_id not in history:
+            history[user_id] = dict()
 
         for brand_id in user.brands:
-            if brand_id not in history[user.id]:
+            if brand_id not in history[user_id]:
                 history[user.id][brand_id] = \
                     { 'view': 0, 'buy': 0, 'label': 0 }
 
-            history[user.id][brand_id]['view'] = 1 if \
+            history[user_id][brand_id]['view'] = 1 if \
                 sum([sum(user.data[month][brand_id]) - user.data[month][brand_id][1] \
                     for month in \
                     xrange(BASE_MONTH, BASE_MONTH + N_MONTH - 1)
@@ -123,39 +137,65 @@ if __name__ == '__main__':
                     brand_id in user.data[BASE_MONTH + N_MONTH - 1] \
                 else 0
 
-    view_before = sum([1 for user_id, brands in history.items() \
+    view_before_pos = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['view'] > 0 and counter['buy'] < 1])
-    buy_before = sum([1 for user_id, brands in history.items() \
+        if counter['label'] > 0 and counter['view'] > 0 and counter['buy'] < 1]
+    view_before_neg = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['buy'] > 0])
-    buy_total = sum([1 for user_id, brands in history.items() \
+        if counter['label'] < 1 and counter['view'] > 0 and counter['buy'] < 1]
+    buy_before = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0])
-    print 'View Not Buy before: ', view_before, buy_total, \
-        '{:.2f}%'.format(float(view_before) / buy_total * 100)
-    print 'Buy before: ', buy_before, buy_total, \
-        '{:.2f}%'.format(float(buy_before) / buy_total * 100)
+        if counter['label'] > 0 and counter['buy'] > 0]
+    buy_total = [(user_id, brand_id) for user_id, brands in history.items() \
+        for brand_id, counter in brands.items() \
+        if counter['label'] > 0]
+    print 'View Not Buy before: ', len(view_before_pos), len(buy_total), \
+        '{:.2f}%'.format(float(len(view_before_pos)) / len(buy_total) * 100)
+    print 'Buy before: ', len(buy_before), len(buy_total), \
+        '{:.2f}%'.format(float(len(buy_before)) / len(buy_total) * 100)
+    print ''
     
+    view_before = view_before_pos + view_before_neg
+    k_fold = cross_validation.KFold(len(view_before), n_folds=5, shuffle=True)
+    data = []
+    label = []
+    for user_id, brand_id in view_before:
+        user = users[user_id]
+        data.append(user.date_per_day(brand_id) + user.data_per_week(brand_id))
+        label.append(1 if (user_id, brand_id) in view_before_pos else 0)
+    data = numpy.asarray(data)
+    label = numpy.asarray(label)
+    for train_index, test_index in k_fold:
+        logistic = linear_model.LogisticRegression(class_weight='auto')
+        logistic.fit(data[train_index], label[train_index])
 
-    # import some data to play with
-    iris = datasets.load_iris()
-    X = iris.data[:, :2]  # we only take the first two features.
-    Y = iris.target
+        print 'Training: ', sum(label[train_index]), '/', len(label)
+        print 'Validation: ', sum(label[test_index]), '/', len(label)
 
-    print X.shape
-    print Y.shape
+        print '-------------------------------------------------------------'
 
-    h = .02  # step size in the mesh
+        pos_idx = [idx for idx, tag in enumerate(label[train_index]) if tag > 0]
+        neg_idx = [idx for idx, tag in enumerate(label[train_index]) if tag < 1]
+        predict = logistic.predict(data[train_index])
+        pos2neg = [(a, b) for a, b in zip(label[train_index][pos_idx], predict[pos_idx]) if a != b]
+        neg2pos = [(a, b) for a, b in zip(label[train_index][neg_idx], predict[neg_idx]) if a != b]
 
-    logreg = linear_model.LogisticRegression(C=1e5)
+        error = numpy.sum(numpy.absolute(predict - label[train_index]))
+        print 'Training:', error, len(train_index), \
+            '{:.2f}%'.format(float(error) / len(train_index) * 100)
+        print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
 
-    # we create an instance of Neighbours Classifier and fit the data.
-    logreg.fit(X, Y)
+        print '-------------------------------------------------------------'
 
-    # Plot the decision boundary. For that, we will assign a color to each
-    # point in the mesh [x_min, m_max]x[y_min, y_max].
-    x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
-    y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-    Z = logreg.predict(np.c_[xx.ravel(), yy.ravel()])
+        pos_idx = [idx for idx, tag in enumerate(label[test_index]) if tag > 0]
+        neg_idx = [idx for idx, tag in enumerate(label[test_index]) if tag < 1]
+        predict = logistic.predict(data[test_index])
+        pos2neg = [(a, b) for a, b in zip(label[test_index][pos_idx], predict[pos_idx]) if a != b]
+        neg2pos = [(a, b) for a, b in zip(label[test_index][neg_idx], predict[neg_idx]) if a != b]
+
+        error = numpy.sum(numpy.absolute(predict - label[test_index]))
+        print 'Validation:', error, len(test_index), \
+            '{:.2f}%'.format(float(error) / len(test_index) * 100)
+        print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
+
+        print ''

@@ -125,8 +125,8 @@ class BFS(object):
 
 if __name__ == '__main__':
     userInfo = dict()
-    with open('/home/pumpkin/Documents/project/tmall/dataset/t_alibaba_data.csv', 'rb') as csvfile:
-    # with open('/home/pumpkin/Documents/project/tmall/dataset/demo.csv', 'rb') as csvfile:
+    with open('../../dataset/t_alibaba_data.csv', 'rb') as csvfile:
+    # with open('../../dataset/dataset/demo.csv', 'rb') as csvfile:
         user_table = dict()
         brand_table = dict()
         user_counter = 0
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     k_half = M.dot(Q).dot(M.T * Q)
     for n in xrange(1, n_step):
         print n
-        k_half += M.dot(k[n-1]).dot(M.T)
+        k_half = M.dot(k_half).dot(M.T) + k_half
 
     # print k_half.todense()
     print k_half.shape

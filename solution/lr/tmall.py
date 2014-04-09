@@ -22,6 +22,7 @@ from scipy.sparse import lil_matrix
 
 from sklearn import svm
 from sklearn import linear_model, cross_validation, datasets, metrics
+from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import convolve
 from sklearn.cross_validation import train_test_split
 from sklearn.neural_network import BernoulliRBM
@@ -234,7 +235,27 @@ if __name__ == '__main__':
 
     for train_index, test_index in k_fold:
         logistic = linear_model.LogisticRegression(class_weight='auto')
-        logistic.fit(data[train_index], label[train_index])
+
+        train_data = data[train_index]
+        train_label = label[train_index]
+
+        neigh = NearestNeighbors(5)
+        neigh.fit(train_data)
+
+        print neigh.kneighbors(train_data[0])
+        exit()
+
+        train_data_pos = [x for x, y in zip(train_data, train_label) if y > 0]
+        train_data_neg = [x for x, y in zip(train_data, train_label) if y < 1]
+
+        train_data = []
+        for n in xrange(len(train_data_neg)):
+            train_data.append(train_data_pos[random.randint(0, len(train_data_pos) - 1)])
+        train_data += train_data_neg
+        train_label = [1 for n in xrange(len(train_data_neg))]
+        train_label += [0 for n in xrange(len(train_data_neg))]
+
+        logistic.fit(train_data, train_label)
         predict = logistic.predict(data[train_index])
 
         print("Training Report:\n%s\n" % (

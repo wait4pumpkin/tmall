@@ -25,7 +25,7 @@ from sklearn import linear_model, cross_validation, datasets, metrics
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import convolve
 from sklearn.cross_validation import train_test_split
-from sklearn.neural_network import BernoulliRBM
+#from sklearn.neural_network import BernoulliRBM
 from sklearn.pipeline import Pipeline
 
 
@@ -234,6 +234,67 @@ if __name__ == '__main__':
     label = numpy.asarray(label)
 
     for train_index, test_index in k_fold:
+        train_data = data[train_index]
+        train_label = label[train_index]
+
+        train_data_pos = [x for x, y in zip(train_data, train_label) if y > 0]
+        train_data_neg = [x for x, y in zip(train_data, train_label) if y < 1]
+
+        classifier = []
+        train_data_boost = []
+        train_label_boost = []
+        for n in xrange(100):
+            logistic = linear_model.LogisticRegression(class_weight='auto')
+
+            train_data_part = train_data_pos + random.sample(train_data_neg, len(train_data_pos))
+            train_label_part = [1 for n in xrange(len(train_data_pos))] \
+                             + [0 for n in xrange(len(train_data_pos))]
+
+            logistic.fit(train_data_part, train_label_part)
+            predict = logistic.predict(train_data_part)
+
+            print("Training Report:\n%s\n" % (
+                metrics.classification_report(
+                    train_label_part, 
+                    predict)))
+
+            classifier.append(logistic)
+            train_data_boost.append(predict)
+            train_label_boost += train_label_part
+
+        print numpy.asarray(train_data_boost).shape
+        print len(train_label_boost)
+
+        pos_idx = [idx for idx, tag in enumerate(label[train_index]) if tag > 0]
+        neg_idx = [idx for idx, tag in enumerate(label[train_index]) if tag < 1]
+        
+        pos2neg = [(a, b) for a, b in zip(label[train_index][pos_idx], predict[pos_idx]) if a != b]
+        neg2pos = [(a, b) for a, b in zip(label[train_index][neg_idx], predict[neg_idx]) if a != b]
+
+        print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
+        print ''
+
+        predict = logistic.predict(data[test_index])
+
+        print("Validation Report:\n%s\n" % (
+            metrics.classification_report(
+                label[test_index], 
+                predict)))
+
+        pos_idx = [idx for idx, tag in enumerate(label[test_index]) if tag > 0]
+        neg_idx = [idx for idx, tag in enumerate(label[test_index]) if tag < 1]
+        
+        pos2neg = [(a, b) for a, b in zip(label[test_index][pos_idx], predict[pos_idx]) if a != b]
+        neg2pos = [(a, b) for a, b in zip(label[test_index][neg_idx], predict[neg_idx]) if a != b]
+
+        print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
+
+        print '-------------------------------------------------------------'
+        print ''
+
+
+    """
+    for train_index, test_index in k_fold:
         logistic = linear_model.LogisticRegression(class_weight='auto')
 
         train_data = data[train_index]
@@ -290,8 +351,6 @@ if __name__ == '__main__':
         print '-------------------------------------------------------------'
         print ''
     
-
-    """
     # Load Data
     
     # Models we will use

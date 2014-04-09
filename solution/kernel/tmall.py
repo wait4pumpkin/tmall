@@ -126,7 +126,7 @@ class BFS(object):
 if __name__ == '__main__':
     userInfo = dict()
     with open('../../dataset/t_alibaba_data.csv', 'rb') as csvfile:
-    # with open('../../dataset/dataset/demo.csv', 'rb') as csvfile:
+    # with open('../../dataset/demo.csv', 'rb') as csvfile:
         user_table = dict()
         brand_table = dict()
         user_counter = 0
@@ -190,7 +190,8 @@ if __name__ == '__main__':
 
     Q = 1 - prob
 
-    n_step = 10
+    # n_step = 10
+    n_step = 5
     k_half = M.dot(Q).dot(M.T * Q)
     for n in xrange(1, n_step):
         print n

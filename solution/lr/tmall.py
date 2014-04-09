@@ -131,7 +131,7 @@ if __name__ == '__main__':
                     { 'view': 0, 'click': 0, 'cart': 0, 'favor': 0, 'buy': 0, 'label': 0 }
 
             history[user_id][brand_id]['view'] = 1 if \
-                sum([sum(user.data[month][brand_id]) - user.data[month][brand_id][1] \
+                sum([sum(user.data[month][brand_id]) - user.data[month][brand_id][BUY_TAG] \
                     for month in \
                     xrange(BASE_MONTH, BASE_MONTH + N_MONTH - 1)
                     if month in user.data and \
@@ -169,7 +169,7 @@ if __name__ == '__main__':
                     else 0
 
             history[user.id][brand_id]['label'] = \
-                user.data[BASE_MONTH + N_MONTH - 1][brand_id][1] \
+                user.data[BASE_MONTH + N_MONTH - 1][brand_id][BUY_TAG] \
                 if BASE_MONTH + N_MONTH - 1 in user.data and \
                     brand_id in user.data[BASE_MONTH + N_MONTH - 1] \
                 else 0
@@ -204,8 +204,7 @@ if __name__ == '__main__':
     buy_total = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
         if counter['label'] > 0]
-    print Counter([times for _, _, times in click_before_pos])
-    print Counter([times for _, _, times in click_before_neg])
+    
     print 'View Not Buy before: ', len(view_before_pos), len(view_before_neg), len(buy_total), \
         '{:.2f}%'.format(float(len(view_before_pos)) / len(buy_total) * 100)
     print 'Click Not Buy before: ', len(click_before_pos), len(click_before_neg), len(buy_total), \
@@ -233,45 +232,45 @@ if __name__ == '__main__':
     data = numpy.asarray(data)
     label = numpy.asarray(label)
 
-
-
-    """
     for train_index, test_index in k_fold:
         logistic = linear_model.LogisticRegression(class_weight='auto')
         logistic.fit(data[train_index], label[train_index])
+        predict = logistic.predict(data[train_index])
 
-        print 'Training: ', sum(label[train_index]), '/', len(label)
-        print 'Validation: ', sum(label[test_index]), '/', len(label)
-
-        print '-------------------------------------------------------------'
+        print("Training Report:\n%s\n" % (
+            metrics.classification_report(
+                label[train_index], 
+                predict)))
 
         pos_idx = [idx for idx, tag in enumerate(label[train_index]) if tag > 0]
         neg_idx = [idx for idx, tag in enumerate(label[train_index]) if tag < 1]
-        predict = logistic.predict(data[train_index])
+        
         pos2neg = [(a, b) for a, b in zip(label[train_index][pos_idx], predict[pos_idx]) if a != b]
         neg2pos = [(a, b) for a, b in zip(label[train_index][neg_idx], predict[neg_idx]) if a != b]
 
-        error = numpy.sum(numpy.absolute(predict - label[train_index]))
-        print 'Training:', error, len(train_index), \
-            '{:.2f}%'.format(float(error) / len(train_index) * 100)
         print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
+        print ''
 
-        print '-------------------------------------------------------------'
+        predict = logistic.predict(data[test_index])
+
+        print("Validation Report:\n%s\n" % (
+            metrics.classification_report(
+                label[test_index], 
+                predict)))
 
         pos_idx = [idx for idx, tag in enumerate(label[test_index]) if tag > 0]
         neg_idx = [idx for idx, tag in enumerate(label[test_index]) if tag < 1]
-        predict = logistic.predict(data[test_index])
+        
         pos2neg = [(a, b) for a, b in zip(label[test_index][pos_idx], predict[pos_idx]) if a != b]
         neg2pos = [(a, b) for a, b in zip(label[test_index][neg_idx], predict[neg_idx]) if a != b]
 
-        error = numpy.sum(numpy.absolute(predict - label[test_index]))
-        print 'Validation:', error, len(test_index), \
-            '{:.2f}%'.format(float(error) / len(test_index) * 100)
         print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
 
+        print '-------------------------------------------------------------'
         print ''
-    """
+    
 
+    """
     # Load Data
     
     # Models we will use
@@ -328,4 +327,4 @@ if __name__ == '__main__':
     plt.subplots_adjust(0.08, 0.02, 0.92, 0.85, 0.08, 0.23)
 
     plt.show()
-    
+    """

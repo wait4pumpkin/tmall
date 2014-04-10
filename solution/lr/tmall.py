@@ -25,8 +25,6 @@ from sklearn import linear_model, cross_validation, datasets, metrics
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import convolve
 from sklearn.cross_validation import train_test_split
-#from sklearn.neural_network import BernoulliRBM
-from sklearn.pipeline import Pipeline
 
 
 N_MONTH = 4
@@ -58,15 +56,37 @@ class User(object):
 
     def data_per_day(self, brand_id, n_day=1, n_month=3):
         bin_per_month = int(math.ceil(N_DAY_PER_MONTH / float(n_day)))
-        # data = [0 for num in xrange(n_month * bin_per_month * TYPE_LENGTH)]
-        data = [0 for num in xrange(n_month * bin_per_month)]
-        if brand_id not in self.info.keys(): return data
+        data_raw = [0 for num in xrange(n_month * bin_per_month * TYPE_LENGTH)]
+        data_sum = [0 for num in xrange(TYPE_LENGTH)]
+        data_click = [0 for num in xrange(n_month * bin_per_month)]
+        data_buy = [0 for num in xrange(n_month * bin_per_month)]
+        data_favor = [0 for num in xrange(n_month * bin_per_month)]
+        data_cart = [0 for num in xrange(n_month * bin_per_month)]
         for month, day, action in self.info[brand_id]:
             if month not in range(BASE_MONTH, BASE_MONTH + n_month):
                 continue
-            # data[((month - BASE_MONTH) * bin_per_month + int(math.ceil(float(day) / n_day)) - 1) * TYPE_LENGTH + action] += 1
-            data[(month - BASE_MONTH) * bin_per_month + int(math.ceil(float(day) / n_day)) - 1] = 1
-        return data
+            idx = ((month - BASE_MONTH) * bin_per_month \
+                + int(math.ceil(float(day) / n_day)) - 1)
+            data_raw[idx * TYPE_LENGTH + action] += 1
+            data_sum[action] += 1
+            if action == CLICK_TAG:
+                data_click[idx] += 1
+            elif action == BUY_TAG:
+                data_buy[idx] += 1
+            elif action == FAVOR_TAG:
+                data_favor[idx] += 1
+            elif action == CART_TAG:
+                data_cart[idx] += 1
+
+        data_click_buy = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_click, data_buy)]
+        data_click_favor = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_click, data_favor)]
+        data_click_cart = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_click, data_cart)]
+        data_buy_favor = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_buy, data_favor)]
+        data_buy_cart = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_buy, data_cart)]
+        data_favor_cart = [1 if a > 0 and b > 0 else 0 for a, b in zip(data_favor, data_cart)]
+
+        return data_raw + data_sum + data_click_buy + data_click_favor + data_click_cart + \
+               data_buy_favor + data_buy_cart + data_favor_cart
 
     def data_per_week(self, brand_id, n_month=3):
         return self.data_per_day(brand_id, n_day=7, n_month=n_month)
@@ -233,6 +253,7 @@ if __name__ == '__main__':
     data = numpy.asarray(data)
     label = numpy.asarray(label)
 
+    """
     for train_index, test_index in k_fold:
         train_data = data[train_index]
         train_label = label[train_index]
@@ -252,6 +273,9 @@ if __name__ == '__main__':
 
             logistic.fit(train_data_part, train_label_part)
             predict = logistic.predict(train_data_part)
+
+            print logistic.predict_proba(train_data_part)
+            exit()
 
             print("Training Report:\n%s\n" % (
                 metrics.classification_report(
@@ -300,11 +324,11 @@ if __name__ == '__main__':
         train_data = data[train_index]
         train_label = label[train_index]
 
-        neigh = NearestNeighbors(5)
-        neigh.fit(train_data)
+        # neigh = NearestNeighbors(5)
+        # neigh.fit(train_data)
 
-        print neigh.kneighbors(train_data[0])
-        exit()
+        # print neigh.kneighbors(train_data[0])
+        # exit()
 
         train_data_pos = [x for x, y in zip(train_data, train_label) if y > 0]
         train_data_neg = [x for x, y in zip(train_data, train_label) if y < 1]
@@ -351,6 +375,7 @@ if __name__ == '__main__':
         print '-------------------------------------------------------------'
         print ''
     
+    """
     # Load Data
     
     # Models we will use

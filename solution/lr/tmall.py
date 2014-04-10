@@ -87,6 +87,7 @@ class User(object):
 
         return data_raw + data_sum + data_click_buy + data_click_favor + data_click_cart + \
                data_buy_favor + data_buy_cart + data_favor_cart
+        # return data_sum
 
     def data_per_week(self, brand_id, n_month=3):
         return self.data_per_day(brand_id, n_day=7, n_month=n_month)
@@ -99,32 +100,31 @@ class User(object):
 
 
 if __name__ == '__main__':
-    userInfo = dict()
+    user_info = dict()
     with open('../../dataset/t_alibaba_data.csv', 'rb') as csvfile:
-    # with open('../../dataset/dataset/demo.csv', 'rb') as csvfile:
         user_table = dict()
         brand_table = dict()
         user_counter = 0
         brand_counter = 0
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
-            userID, brandID, actionType, month, day = [int(field) for field in row]
+            user_id, brand_id, action_type, month, day = [int(field) for field in row]
 
-            if userID not in user_table:
-                user_table[userID] = user_counter
+            if user_id not in user_table:
+                user_table[user_id] = user_counter
                 user_counter += 1
-            if brandID not in brand_table:
-                brand_table[brandID] = brand_counter
+            if brand_id not in brand_table:
+                brand_table[brand_id] = brand_counter
                 brand_counter += 1
-            userID = user_table[userID]
-            brandID = brand_table[brandID]
+            user_id = user_table[user_id]
+            brand_id = brand_table[brand_id]
 
-            if userID not in userInfo:
-                userInfo[userID] = dict()
+            if user_id not in user_info:
+                user_info[user_id] = dict()
 
-            user = userInfo[userID]
-            if brandID not in user:
-                user[brandID] = []
+            user = user_info[user_id]
+            if brand_id not in user:
+                user[brand_id] = []
 
             if month in (4, 5, 6):
                 day = day - 14
@@ -134,12 +134,12 @@ if __name__ == '__main__':
                 month -= 1
                 day += 31
 
-            band = user[brandID]
-            band.append((month, day, actionType))
+            brand = user[brand_id]
+            brand.append((month, day, action_type))
 
     users = dict()
-    for (userID, info) in userInfo.iteritems():
-        users[userID] = User(userID, info)
+    for user_id, info in user_info.items():
+        users[user_id] = User(user_id, info)
 
     history = dict()
     for user_id, user in users.items():
@@ -152,7 +152,7 @@ if __name__ == '__main__':
                     { 'view': 0, 'click': 0, 'cart': 0, 'favor': 0, 'buy': 0, 'label': 0 }
 
             history[user_id][brand_id]['view'] = 1 if \
-                sum([sum(user.data[month][brand_id]) - user.data[month][brand_id][BUY_TAG] \
+                sum([sum(user.data[month][brand_id]) \
                     for month in \
                     xrange(BASE_MONTH, BASE_MONTH + N_MONTH - 1)
                     if month in user.data and \
@@ -183,7 +183,7 @@ if __name__ == '__main__':
                     else 0
 
             history[user.id][brand_id]['buy'] = 1 if \
-                sum([user.data[month][brand_id][1] for month in \
+                sum([user.data[month][brand_id][BUY_TAG] for month in \
                     xrange(BASE_MONTH, BASE_MONTH + N_MONTH - 1)
                     if month in user.data and \
                         brand_id in user.data[month]]) > 0 \
@@ -197,28 +197,28 @@ if __name__ == '__main__':
 
     view_before_pos = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['view'] > 0 and counter['buy'] < 1]
+        if counter['label'] > 0 and counter['view'] > 0]
     view_before_neg = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] < 1 and counter['view'] > 0 and counter['buy'] < 1]
+        if counter['label'] < 1 and counter['view'] > 0]
     click_before_pos = [(user_id, brand_id, counter['click']) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['click'] > 0 and counter['buy'] < 1]
+        if counter['label'] > 0 and counter['click'] > 0]
     click_before_neg = [(user_id, brand_id, counter['click']) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] < 1 and counter['click'] > 0 and counter['buy'] < 1]
+        if counter['label'] < 1 and counter['click'] > 0]
     cart_before_pos = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['cart'] > 0 and counter['buy'] < 1]
+        if counter['label'] > 0 and counter['cart'] > 0]
     cart_before_neg = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] < 1 and counter['cart'] > 0 and counter['buy'] < 1]
+        if counter['label'] < 1 and counter['cart'] > 0]
     favor_before_pos = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] > 0 and counter['favor'] > 0 and counter['buy'] < 1]
+        if counter['label'] > 0 and counter['favor'] > 0]
     favor_before_neg = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
-        if counter['label'] < 1 and counter['favor'] > 0 and counter['buy'] < 1]
+        if counter['label'] < 1 and counter['favor'] > 0]
     buy_before = [(user_id, brand_id) for user_id, brands in history.items() \
         for brand_id, counter in brands.items() \
         if counter['label'] > 0 and counter['buy'] > 0]
@@ -261,7 +261,7 @@ if __name__ == '__main__':
         train_data_pos = [x for x, y in zip(train_data, train_label) if y > 0]
         train_data_neg = [x for x, y in zip(train_data, train_label) if y < 1]
 
-        classifier = []
+        classifiers = []
         train_data_boost = []
         train_label_boost = []
         for n in xrange(100):
@@ -274,20 +274,28 @@ if __name__ == '__main__':
             logistic.fit(train_data_part, train_label_part)
             predict = logistic.predict(train_data_part)
 
-            print logistic.predict_proba(train_data_part)
-            exit()
+            # print("Training Report:\n%s\n" % (
+            #     metrics.classification_report(
+            #         train_label_part, 
+            #         predict)))
 
-            print("Training Report:\n%s\n" % (
-                metrics.classification_report(
-                    train_label_part, 
-                    predict)))
-
-            classifier.append(logistic)
+            classifiers.append(logistic)
             train_data_boost.append(predict)
             train_label_boost += train_label_part
 
-        print numpy.asarray(train_data_boost).shape
-        print len(train_label_boost)
+        predict = numpy.zeros(len(train_label))
+        for classifier in classifiers:
+            predict += numpy.asarray(classifier.predict(train_data))
+        predict[predict > 5] = 1
+        predict[predict <= 5] = 0
+
+        print len(train_label)
+        print predict.shape
+        print len(predict.tolist())
+        print("Training Report:\n%s\n" % (
+                metrics.classification_report(
+                    train_label, 
+                    predict.tolist())))
 
         pos_idx = [idx for idx, tag in enumerate(label[train_index]) if tag > 0]
         neg_idx = [idx for idx, tag in enumerate(label[train_index]) if tag < 1]
@@ -316,46 +324,34 @@ if __name__ == '__main__':
         print '-------------------------------------------------------------'
         print ''
 
-
     """
     for train_index, test_index in k_fold:
-        logistic = linear_model.LogisticRegression(class_weight='auto')
+        logistic = linear_model.LogisticRegression(class_weight=None)
 
         train_data = data[train_index]
         train_label = label[train_index]
 
-        # neigh = NearestNeighbors(5)
-        # neigh.fit(train_data)
-
-        # print neigh.kneighbors(train_data[0])
-        # exit()
-
         train_data_pos = [x for x, y in zip(train_data, train_label) if y > 0]
         train_data_neg = [x for x, y in zip(train_data, train_label) if y < 1]
 
-        train_data = []
-        for n in xrange(len(train_data_neg)):
-            train_data.append(train_data_pos[random.randint(0, len(train_data_pos) - 1)])
-        train_data += train_data_neg
-        train_label = [1 for n in xrange(len(train_data_neg))]
-        train_label += [0 for n in xrange(len(train_data_neg))]
-
         logistic.fit(train_data, train_label)
-        predict = logistic.predict(data[train_index])
+        predict = logistic.predict(train_data)
 
         print("Training Report:\n%s\n" % (
             metrics.classification_report(
-                label[train_index], 
+                train_label, 
                 predict)))
 
         pos_idx = [idx for idx, tag in enumerate(label[train_index]) if tag > 0]
         neg_idx = [idx for idx, tag in enumerate(label[train_index]) if tag < 1]
         
-        pos2neg = [(a, b) for a, b in zip(label[train_index][pos_idx], predict[pos_idx]) if a != b]
-        neg2pos = [(a, b) for a, b in zip(label[train_index][neg_idx], predict[neg_idx]) if a != b]
+        pos2neg = [(a, b) for a, b in zip(train_label[pos_idx], predict[pos_idx]) if a != b]
+        neg2pos = [(a, b) for a, b in zip(train_label[neg_idx], predict[neg_idx]) if a != b]
 
         print 'Pos2neg: ', len(pos2neg), ' ', 'Neg2pos: ', len(neg2pos)
         print ''
+
+
 
         predict = logistic.predict(data[test_index])
 

@@ -251,6 +251,7 @@ if __name__ == '__main__':
     k_fold = cross_validation.KFold(len(view_before), n_folds=5, shuffle=True)
     data = []
     label = []
+    mark = []
     for user_id, brand_id in view_before:
         user = users[user_id]
         data.append(user.data_per_day(brand_id) + 
@@ -259,6 +260,7 @@ if __name__ == '__main__':
             user.data_per_day(brand_id, n_day=10) + 
             user.data_per_day(brand_id, n_day=15))
         label.append(1 if (user_id, brand_id) in view_before_pos else 0)
+        mark.append((user_id, brand_id))
     data = numpy.asarray(data)
     label = numpy.asarray(label)
 
@@ -323,6 +325,23 @@ if __name__ == '__main__':
         print ''
 
         predict = logistic.predict(data[test_index])
+        test_mark = mark[test_index]
+        result = dict()
+        for label, tag in zip(predict, test_mark):
+            if label < 1: continue
+            if tag[0] not in result:
+                result[tag[0]] = []
+            result[tag[0]].append(tag[1])
+
+        test_label = []
+        for user_id, brands in history.items():
+            for brand_id, counter in brands.items():
+                test_label.append(1 if counter['label'] > 0 else 0)
+                
+
+        view_before_pos = [(user_id, brand_id) for user_id, brands in history.items() \
+        for brand_id, counter in brands.items() \
+        if counter['label'] > 0 and counter['view'] > 0]
 
         print("Validation Report:\n%s\n" % (
             metrics.classification_report(

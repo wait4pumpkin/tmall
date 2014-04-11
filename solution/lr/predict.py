@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-  
-from __future__ import print_function
-
 import csv
 import random
 import glob
@@ -310,9 +308,6 @@ if __name__ == '__main__':
 
     f = open('result.txt', 'w')
     for user_id, brands in result.items():
-        print(f, str(user_id) + '\t' + str(brands[0]), end='')
-        for n in xrange (1, len(brands)):
-            print(f, ',' + str(brands[n]), end='')
-        print(f, '\n', end='')
+        print >> f, str(user_id) + '\t' + ','.join([str(brand) for brand in brands])
 
 
